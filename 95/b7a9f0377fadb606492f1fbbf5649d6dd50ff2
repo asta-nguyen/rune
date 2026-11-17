@@ -1,0 +1,35 @@
+crates/rune/src/runtime/tests/mod.rs
+  s_63ad9d5ccbd920::t_61e10ae92996d0 15
+crates/rune/src/runtime/tests/input_edge_scroll.rs
+  s_63ad9d5ccbd920::t_b89bcf8bc8c001 4-8,11-15,17,20-37,53-55,57,135
+  s_63ad9d5ccbd920::t_c5b5f492f28290 1-3,9-10,16,18-19,38-52,56,58-84,86-101,109-134
+  s_63ad9d5ccbd920::t_eff0261c8ab772 102-103
+  s_63ad9d5ccbd920::t_8611caf65d14d5 85
+  s_63ad9d5ccbd920::t_7188e5b354a21f 104-108
+crates/rune/src/runtime/selection/edge_scroll.rs
+  s_63ad9d5ccbd920::t_4e241bf7bbbc2e 303-304,321-328
+  s_63ad9d5ccbd920::t_c8f9fd97a61f2a 3
+  s_63ad9d5ccbd920::t_5b837c11a4e64c 4-11
+  s_63ad9d5ccbd920::t_35334bb1e0ad25 274-282
+  s_63ad9d5ccbd920::t_84ad4133157c48 208-212,216,329
+crates/rune/src/runtime/input/pointer.rs
+  s_63ad9d5ccbd920::t_b6080db3c15494 117
+changelog/unreleased/2026-11-17-text-field-drag-autoscroll.md
+  s_63ad9d5ccbd920::t_1cdd105b6e9e27 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "95b7a9f0377fadb606492f1fbbf5649d6dd50ff2",
+  "prompts": {},
+  "sessions": {
+    "s_63ad9d5ccbd920": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "cloud-lute",
+        "model": "unknown"
+      },
+      "human_author": "asta-nguyen <asta.dev.520@gmail.com>"
+    }
+  }
+}
