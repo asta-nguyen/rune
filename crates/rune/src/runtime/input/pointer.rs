@@ -114,6 +114,7 @@ impl<S: 'static> Runtime<S> {
         self.cancel_drag();
         self.drop_drag_out_request();
         self.input_click.clear();
+        self.stop_edge_scroll();
         self.drop_press();
         self.secondary = capture::Secondary::Up;
         self.tint = capture::Tint::Up;

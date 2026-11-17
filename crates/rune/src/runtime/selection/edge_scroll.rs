@@ -1,13 +1,14 @@
 //! A held press extending a selection keeps scrolling its list while the pointer stays at or past
 //! the list's top or bottom edge, as an AppKit text view autoscrolls on its periodic events: each
-//! step moves the list by an amount that grows with how far past the edge the pointer is. A step
-//! is a timer: [`step`] keeps its `Attempt` and asks for the next frame, which feeds it back as
-//! `Due`. The frame that takes a step scrolls, lays the list out, and only then extends the
-//! selection to the point under the pointer (`Laid`), painting it again if that changed it, so
-//! the selection always matches what that frame shows and nothing waits on a later step. A
-//! pointer back inside,
-//! the end of the list, a step that moved nothing (a list pinned to its bottom pulling it back),
-//! and the drag ending stop it. Stopped at an edge it can't scroll past, a press still held there
+//! step moves the list by an amount that grows with how far past the edge the pointer is. It
+//! serves selectable text and a text field's drag alike. A step is a timer: [`step`] keeps its
+//! `Attempt` and asks for the next frame, which feeds it back as `Due`. The frame that takes a
+//! step scrolls, lays the list out, and only then extends the selection to the point under the
+//! pointer (`Laid`), painting it again if that changed it: selectable text's selection lives here
+//! and changes at once, while a field's lives in the app's `TextEdit`, so its drag is queued for
+//! the next frame's commit, one step behind the scroll. A pointer back inside, the end of the
+//! list, a step that moved nothing (a list pinned to its bottom pulling it back), and the drag
+//! ending stop it. Stopped at an edge it can't scroll past, a press still held there
 //! waits without a wake for the list's extent to change (rows arriving at its end): the frame that
 //! lays that out looks at the edge again, and goes on if there's room. Each step lets go of a
 //! list stuck to its bottom before `step_scroll` can pull it back, so it leaves the bottom however small its steps are; once it
@@ -204,10 +205,15 @@ impl EdgeScroll {
 fn speed(past: f32) -> f32 { (RATE * past.max(MIN_PAST)).min(MAX_SPEED) }
 
 impl<S: 'static> Runtime<S> {
+    /// A held press is extending a selection: selectable text's, or a text field's.
+    fn dragging_selection(&self) -> bool {
+        self.selectable.phase.dragging() || self.input_click.dragging_path().is_some()
+    }
+
     /// The held pointer moved to height `y`: step while it's at or past an edge the selection's
     /// viewport can still scroll past, and stop when it isn't.
     pub(in crate::runtime) fn edge_scroll_moved(&mut self, y: f32) {
-        if !self.selectable.phase.dragging() && self.selectable.edge.state == State::Idle { return; }
+        if !self.dragging_selection() && self.selectable.edge.state == State::Idle { return; }
         let edge = self.edge_at(y);
         let now = self.now_clock();
         let effects = self.selectable.edge.step(Event::Moved { now, edge });
@@ -265,7 +271,15 @@ impl<S: 'static> Runtime<S> {
         for effect in effects {
             match effect {
                 Effect::Scroll { scroll, by } => self.edge_scroll_by(scroll, by),
-                Effect::Extend => if let Some((x, y)) = self.pointer { self.selection_drag(x, y) },
+                // A field's selection lives in the app's `TextEdit`: its drag is queued for the
+                // next frame's commit, which reads the layout this step just made.
+                Effect::Extend => if let Some((x, y)) = self.pointer {
+                    if self.input_click.dragging_path().is_some() {
+                        self.input_drag(x, y, true);
+                    } else {
+                        self.selection_drag(x, y);
+                    }
+                },
                 Effect::WakeAt(due) => self.wake_at(due),
             }
         }
@@ -286,8 +300,8 @@ impl<S: 'static> Runtime<S> {
     /// held press is extending: at or past its top or bottom (as drawn, inside its clips and the
     /// window), how fast that scrolls, and how far it still can.
     fn edge_at(&self, y: f32) -> Option<Edge> {
-        if !self.selectable.phase.dragging() || !self.press.is_held() { return None; }
-        let holder = self.selection_holder()?;
+        if !self.dragging_selection() || !self.press.is_held() { return None; }
+        let holder = self.drag_holder()?;
         let i = std::iter::successors(Some(holder), |&p| self.nodes[p].parent)
             .find(|&p| self.nodes[p].scroll.is_some() && self.nodes[p].scroll_axes.has(false))?;
         let id = self.nodes[i].id;
@@ -303,6 +317,15 @@ impl<S: 'static> Runtime<S> {
             return None;
         };
         Some(Edge { scroll: id, speed, room, offset: st.offset, max: st.max })
+    }
+
+    /// The node holding what the held press is extending: the selectable text's anchor, or the
+    /// text field the drag is in.
+    fn drag_holder(&self) -> Option<usize> {
+        match self.input_click.dragging_path() {
+            Some(path) => self.live(path).filter(|&i| self.nodes[i].input.is_some()),
+            None => self.selection_holder(),
+        }
     }
 }
 
